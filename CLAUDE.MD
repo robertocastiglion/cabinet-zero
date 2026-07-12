@@ -59,139 +59,177 @@ export interface GameHandle {
 ## STATO CORRENTE
 
 - Scaffold Vite+TS+Pages ✅, motore ✅, vector-duel ✅, shell ✅, deploy Cloudflare Pages ✅
-- **Ciclo 2 in corso:** secondo gioco originale — nova-shield (deflettore rotazionale)
+- nova-shield ✅ (31/31 test, deploy live)
+- **Ciclo 3 in corso:** terzo gioco originale — chrome-rush (run-and-gun platformer)
 
 ---
 
 ## [PROSSIMO TASK]
 
-### GAME: nova-shield
+### GAME: chrome-rush
 
-**Title:** NOVA SHIELD
-**Slug:** nova-shield
-**Accent:** #ff6600
+**Title:** CHROME RUSH
+**Slug:** chrome-rush
+**Accent:** #00e676
 
 #### Core mechanic
-- **Verb:** deflect
-- **Loop:** energy bolts fly from the arena edges toward the center; player rotates a shield arc to intercept them before they reach the core
-- **Escalation:** each wave adds more simultaneous bolts and increases their speed; wave bonus every 10 deflections
-- **Game over:** any bolt reaches within 18px of the center (the player's core)
-- **Fun insight:** the rotation mechanic creates split-second "which bolt to save first" decisions — satisfying when you barely catch one, tense when two converge at once
+- **Verb:** run + jump + shoot
+- **Loop:** player runs left/right on a neon-lit floor, jumps to avoid contact, and fires in the facing direction to destroy approaching enemy drones before they reach melee range
+- **Escalation:** kill-count waves; each wave brings faster enemies and shorter spawn intervals
+- **Game over:** player HP reaches 0 (3 hits)
+- **Fun insight:** "must face enemy to shoot" forces constant repositioning — backing away is safe but ineffective; advancing is risky but earns points; jump creates timing-based risk-reward
 
-#### sim.ts architecture
+#### sim.ts constants + interfaces
 
 ```ts
-export const SCORE_VALUES = { deflect: 10, wave_bonus: 50 } as const;
-export const WORLD = { W: 800, H: 600 } as const;
-export const CENTER = { x: 400, y: 300 } as const;
-export const SHIELD_RADIUS = 90;          // distance of arc from center
-export const SHIELD_SPAN = Math.PI * 0.44; // ~80° arc half-angle each side = 160° total
-export const SHIELD_TURN = 2.8;           // rad/s
+export const WORLD        = { W: 800, H: 600 } as const;
+export const FLOOR_Y      = 498;
+export const GRAVITY      = 900;      // px/s²
+export const JUMP_VEL     = -490;     // px/s upward (negative = up)
+export const PLAYER_SPEED = 290;      // px/s horizontal
+export const BULLET_SPEED = 500;      // px/s
+export const FIRE_RATE    = 0.15;     // seconds between shots
+export const PLAYER_W     = 22;       // half-width for wall clamp
+export const HIT_DIST     = 30;       // enemy-player contact distance px
 
-export interface Vec2 { x: number; y: number }
+export const SCORE_VALUES = { walker: 10, runner: 20, wave_bonus: 50 } as const;
 
-export interface Bolt {
+export type EnemyKind = 'walker' | 'runner';
+
+export interface Player {
+  x: number; y: number;   // center-x, feet-y
+  vy: number;              // vertical velocity (positive = down)
+  facing: -1 | 1;
+  hp: number;              // 1-3
+  iframes: number;         // invincibility seconds remaining
+  fireTimer: number;       // seconds until next allowed shot
+  flashTimer: number;      // white-flash visual seconds after hit
+}
+
+export interface Enemy {
   id: number;
-  pos: Vec2;
-  vel: Vec2;  // always pointed roughly toward CENTER, speed varies
+  kind: EnemyKind;
+  x: number;
+  dir: -1 | 1;    // approach direction
+  speed: number;
+}
+
+export interface Bullet {
+  id: number;
+  x: number; y: number;
+  vx: number;
 }
 
 export interface SimInput {
-  left: boolean;
-  right: boolean;
+  left: boolean; right: boolean; jump: boolean; fire: boolean;
 }
 
 export interface SimState {
-  shieldAngle: number;      // radians, 0 = right, increases clockwise
-  bolts: Bolt[];
+  player: Player;
+  enemies: Enemy[];
+  bullets: Bullet[];
   score: number;
   wave: number;
-  deflected: number;        // total deflections this wave
-  spawnTimer: number;       // counts down to next bolt spawn
-  spawnInterval: number;    // seconds between spawns (decreases with wave)
+  killsThisWave: number;
+  killTarget: number;      // kills to advance wave
+  spawnTimer: number;
+  spawnInterval: number;
+  waveFlash: number;       // seconds to show "WAVE N" text
   status: 'playing' | 'gameover';
 }
 
-// Exported for tests
 export function createSim(rng: () => number): SimState
 export function stepSim(state: SimState, input: SimInput, dt: number, rng: () => number): SimState
 ```
 
-**stepSim logic (pure, no side effects):**
-1. Update shieldAngle: `+= (right ? 1 : left ? -1 : 0) * SHIELD_TURN * dt`; wrap to [0, 2π)
-2. Update each bolt: `pos += vel * dt`
-3. **Shield collision check:** for each bolt, compute `dist = distance(bolt.pos, CENTER)`. If `dist <= SHIELD_RADIUS + 6` AND `dist >= SHIELD_RADIUS - 20`:
-   - compute `boltAngle = atan2(bolt.pos.y - CENTER.y, bolt.pos.x - CENTER.x)`
-   - compute angular diff vs shieldAngle, normalize to (−π, π)
-   - if `|angularDiff| <= SHIELD_SPAN`: deflect → reverse radial velocity component (bolt bounces away from center); score += SCORE_VALUES.deflect; deflected++
-4. **Wave check:** if `deflected >= 5 + wave * 2` → wave++, score += SCORE_VALUES.wave_bonus, deflected = 0, spawnInterval *= 0.85
-5. **Death check:** for each bolt, if `distance(bolt.pos, CENTER) < 18` → status = 'gameover'
-6. **Remove bolts** that have traveled far enough to be off-screen (distance > 700) or have been deflected (track via a `deflected` flag on bolt, or filter in collision)
-7. **Spawn timer:** spawnTimer -= dt; when ≤ 0: spawn new bolt from random edge at radius 480–500 from center, velocity aimed at CENTER ± small random offset (use rng), speed = 130 + wave * 18 + rng()*30; reset spawnTimer = spawnInterval
+**createSim:** player at (WORLD.W/2, FLOOR_Y), vy=0, facing=1, hp=3, iframes=0, fireTimer=0, flashTimer=0; no enemies/bullets; wave=1, killsThisWave=0, killTarget=5, spawnTimer=1.0, spawnInterval=3.2, waveFlash=0.
 
-**Bolt spawning:** pick random angle θ = rng() * 2π, pos = (CENTER.x + cos(θ)*490, CENTER.y + sin(θ)*490), vel aimed at CENTER with speed variance.
+**stepSim logic (pure, all arrays immutable — return new objects):**
+1. **Horizontal movement:** dx = (right?1:left?-1:0)*PLAYER_SPEED*dt; new x = clamp(x+dx, PLAYER_W/2, WORLD.W-PLAYER_W/2). If moving: update facing.
+2. **Gravity + jump:** new vy = vy + GRAVITY*dt; if jump AND y >= FLOOR_Y: new vy = JUMP_VEL. new y = y + vy*dt. If y >= FLOOR_Y: y = FLOOR_Y, vy = 0.
+3. **Decay timers:** iframes = max(0, iframes-dt); flashTimer = max(0, flashTimer-dt); fireTimer = max(0, fireTimer-dt); waveFlash = max(0, waveFlash-dt).
+4. **Auto-fire:** if fire AND fireTimer <= 0: spawn bullet at (player.x, player.y-21), vx=facing*BULLET_SPEED; reset fireTimer=FIRE_RATE.
+5. **Move bullets:** x += vx*dt. Remove if x < -60 or x > WORLD.W+60.
+6. **Move enemies:** x += dir*speed*dt. Remove if x < -90 or x > WORLD.W+90.
+7. **Bullet–enemy collision:** for each bullet vs each enemy: if |bx-ex| < 20 AND |by-(FLOOR_Y-18)| < 26 → remove both, score += SCORE_VALUES[kind], killsThisWave++.
+8. **Enemy–player melee:** for each enemy: if |ex-px| < HIT_DIST AND iframes <= 0 → player.hp--, iframes=1.8, flashTimer=0.35; remove enemy.
+9. **Wave advance:** if killsThisWave >= killTarget → wave++, score += SCORE_VALUES.wave_bonus, killTarget+=3, killsThisWave=0, spawnInterval*=0.85, waveFlash=2.0; return state with cleared enemies and bullets.
+10. **Game over:** if player.hp <= 0 → status = 'gameover'.
+11. **Spawn:** spawnTimer -= dt; if spawnTimer <= 0: side=rng()<0.5?left:right; x=side==='left'?-30:WORLD.W+30; dir=side==='left'?1:-1; kind=wave===1?'walker':rng()<0.45?'runner':'walker'; speed=kind==='walker'?70+(wave-1)*10:115+(wave-1)*13; push new enemy; spawnTimer=spawnInterval*(0.75+rng()*0.5).
 
-#### Rendering
-- **bg:** `#030308`
-- **Arena:** faint concentric rings at r=90 (shield orbit, dashed), r=18 (death zone, red pulsing), r=40 (inner warning ring)
-- **Shield:** arc drawn with `ctx.arc(CENTER.x, CENTER.y, SHIELD_RADIUS, shieldAngle - SHIELD_SPAN, shieldAngle + SHIELD_SPAN)`, thick stroke `#ff6600`, glow via shadow
-- **Core:** filled circle r=10 at CENTER, color white normally, flashes red when a bolt is within r=120
-- **Bolts:** small filled circles r=5, color interpolated from `#4488ff` (slow) to `#ff2244` (fast) based on speed; glow
-- **Deflection sparks:** on deflect, draw 4–6 short lines radiating from collision point (can be done purely in render with a `lastDeflect` field in state holding position + age)
-- **Special effect:** bolt trail — draw 3 fading smaller circles behind each bolt position (use `ttl` or derive from position + velocity extrapolation)
+#### Rendering spec
+- **bg:** `#010108`, three parallax city silhouette layers scrolling right→left at speeds 12/28/55 px/s using a `bgOffset` time variable (pure index.ts state, not in SimState); rectangles at different heights in `#080820` / `#0c0c28`
+- **Floor line:** stroke at y=FLOOR_Y, color `#00e676`, lineWidth=2, shadowBlur=14
+- **Player:** at (player.x, player.y): head circle r=7 at (x,y-47), triangle torso `[(x,y-40),(x-12,y-14),(x+12,y-14)]`, leg lines from base to feet; color `#00e676`; if flashTimer>0: white. Small direction arrow above head
+- **Enemies:** walker: hexagonal outline r=14 centered at (x,FLOOR_Y-18), color `#ff4422`. Runner: diamond 4-point, color `#ff9900`, slight tilt in travel direction
+- **Bullets:** rect 14×4, color `#00ffcc`, horizontal glow trail 3×
+- **HP bar:** 3 small squares top-right of canvas (green=alive, dark=lost), separated by 2px gaps
+- **Wave flash:** centered "WAVE N" text, opacity=waveFlash/2.0, font Press Start 2P, large, color `#00e676`, drawn only when waveFlash > 0
 
-#### 5 tests (exact descriptions for sim.test.ts)
+#### 5 tests (sim.test.ts)
 
-1. **Determinism:** run `createSim(rng42)` then 300 `stepSim` calls with no input and fixed rng seed — repeat with identical seed → `state.score`, `state.wave`, `state.shieldAngle` must be identical
-2. **Shield deflects bolt:** place a bolt at `(CENTER.x + SHIELD_RADIUS - 5, CENTER.y)` moving toward center, set `shieldAngle = 0` (shield centered right) → after one step, bolt's x-velocity should reverse (moving away from center)
-3. **Bolt reaching core causes gameover:** place bolt at `(CENTER.x + 17, CENTER.y)` moving left at speed 200, no shield coverage → after one step `state.status === 'gameover'`
-4. **Wave increments on enough deflections:** create state with `deflected = 5 + wave * 2 - 1` (one short of threshold), trigger one more deflection manually via positioned bolt + aligned shield → `state.wave` increments by 1
-5. **destroy() idempotent, onGameOver ≤ 1 time** (index.test.ts)
+1. **Determinism:** createSim(rng42) + 300 stepSim({left:false,right:false,jump:false,fire:false}) twice same seed → identical score, wave, player.x, player.y
+2. **Jump from ground:** step with {jump:true,...false} from initial state → new player.vy === JUMP_VEL; step again no input → new player.vy > JUMP_VEL (gravity increased it)
+3. **Bullet fired on fire input:** step with {fire:true,...false} → bullets.length===1, bullets[0].vx === BULLET_SPEED (facing=1 default)
+4. **Enemy killed by bullet:** create state with player.x=200, player.y=FLOOR_Y, facing=1; push enemy {kind:'walker',x:220,y:0,dir:-1,speed:0,id:1}; push bullet {id:1,x:215,y:FLOOR_Y-21,vx:BULLET_SPEED}; stepSim({...false}) → enemies.length===0 AND killsThisWave===1
+5. **Iframes prevent double-hit:** push enemy at player.x+20, speed=0; step → player.hp===2, iframes>0; step again → player.hp still===2
 
 ---
 
 ## [NOTE DI PASSAGGIO]
 
-**Stato:** scaffold completo. Engine (loop, input, types), vector-duel, shell, CI tutti funzionanti.
-**Gioco da implementare:** nova-shield (vedi PROSSIMO TASK sopra).
+**Stato:** scaffold + vector-duel + nova-shield tutti ✅. Engine stabile.
+**Gioco da implementare:** chrome-rush (run-and-gun platformer, vedi PROSSIMO TASK).
 
 **File modificabili (whitelist):**
-- `src/games/nova-shield/sim.ts` (da creare)
-- `src/games/nova-shield/sim.test.ts` (da creare)
-- `src/games/nova-shield/index.ts` (da creare)
-- `src/games/nova-shield/index.test.ts` (da creare)
-- `src/catalog.ts` (aggiungere entry)
+- `src/games/chrome-rush/sim.ts` (da creare)
+- `src/games/chrome-rush/sim.test.ts` (da creare)
+- `src/games/chrome-rush/index.ts` (da creare)
+- `src/games/chrome-rush/index.test.ts` (da creare)
+- `src/catalog.ts` (aggiungere entry alla fine)
 - `DECISIONS.md` (appendere 5 righe)
 - `ASSETS.md` (appendere 1 riga)
 - `CLAUDE.MD` (solo REPORT ESECUZIONE)
 
-**File VIETATI:** qualsiasi altro file, in particolare `src/main.ts`, `src/styles.css`, `src/engine/*`, `.github/**`, file con segreti.
+**File VIETATI:** qualsiasi altro file. In particolare `src/main.ts`, `src/styles.css`, `src/engine/*`, `.github/**`, file con segreti.
 
-**Comandi di test esatti (pnpm 11 workaround — usa i binari direttamente):**
+**Comandi di test esatti (pnpm 11 workaround):**
 ```powershell
 .\node_modules\.bin\tsc --noEmit
 .\node_modules\.bin\vitest run
 node scripts/legal-lint.mjs
 .\node_modules\.bin\vite build
 ```
-```bash
+```powershell
 # pattern specifico
-.\node_modules\.bin\vitest run nova-shield/sim
-.\node_modules\.bin\vitest run nova-shield
+.\node_modules\.bin\vitest run chrome-rush/sim
+.\node_modules\.bin\vitest run chrome-rush
 ```
 
-**Trappole specifiche per nova-shield:**
-1. **Deflect come deep copy:** `stepSim` è pura — non mutare l'array `bolts`, restituisci sempre nuovi oggetti.
-2. **Angular wrap:** quando calcoli la differenza angolare shieldAngle−boltAngle, normalizzala a (−π, π) con `((diff + Math.PI) % (2*Math.PI)) - Math.PI`.
-3. **Bolt rimossi dopo il deflect:** un bolt deflesso deve essere rimosso dalla lista (o flaggato), altrimenti viene controllato più volte nello stesso frame.
-4. **Wave check:** controlla wave DOPO aver aggiornato `deflected`, non prima.
-5. **destroy() guard:** usa un flag `let destroyed = false; if (destroyed) return; destroyed = true;` all'inizio di destroy().
-6. **Nessun Math.random() in sim.ts.** Il mulberry32 per i test è già in `src/games/vector-duel/sim.test.ts` — copialo.
+**Pattern index.ts da seguire:** `src/games/nova-shield/index.ts` (structure identica: createLoop, createInput, HiDPI canvas, destroyed guard, satisfies GameModule).
 
-**Criteri di STOP (fermati e scrivi in REPORT ESECUZIONE):**
+**Controls da mappare in index.ts:**
+- left = ArrowLeft | KeyA
+- right = ArrowRight | KeyD
+- jump = ArrowUp | KeyW | Space (usare `onDown` callback per prevenire auto-repeat: `let jumpQueued = false; input.onDown('ArrowUp', () => jumpQueued = true)`)
+- fire = Space | KeyX (tasto separato dal jump: usa Space per entrambi — se lo stesso tasto è jump E fire va bene, il sim li riceve entrambi nello stesso frame)
+
+**Nota sui controlli:** `createInput` restituisce `isDown(code)` — non ha `onDown` callback. Gestire il jump nel loop: passare `jump: input.isDown('ArrowUp') || input.isDown('KeyW')`. Il sim si occuperà di applicare il jump solo se il giocatore è a terra.
+
+**Trappole specifiche per chrome-rush:**
+1. **stepSim è pura:** non mutare mai `state.enemies`, `state.bullets`, `state.player` direttamente — costruisci sempre nuovi array/oggetti.
+2. **Gravity + jump nella stessa funzione:** applica prima gravity (`vy += GRAVITY*dt`), poi controlla jump (`if jump AND y >= FLOOR_Y: vy = JUMP_VEL`), poi applica posizione (`y += vy*dt`), poi clamp floor.
+3. **Wave advance cancella nemici e proiettili:** quando killsThisWave >= killTarget, restituire `enemies: []` e `bullets: []`.
+4. **Test 4 (bullet-enemy):** il bullet.y deve essere FLOOR_Y-21 (posizione di spawn del bullet = player.y - 21), l'enemy.x deve essere dentro la hitzone (|bx-ex| < 20). Usa dt abbastanza grande che copra la distanza in un frame (dt=1/60 con enemy a 215 e bullet a 215 — già in zona).
+5. **Test 5 (iframes):** il nemico deve avere speed=0 e trovarsi a player.x+20 (dentro HIT_DIST=30). Alla seconda stepSim iframes > 0 quindi il secondo hit non avviene.
+6. **ID univoci:** usa un `_nextId` counter nel sim, inizializzato nel createSim e incrementato ad ogni spawn (bullet o enemy). Passarlo come parte dello stato.
+7. **Nessun Math.random() in sim.ts.**
+8. **destroy() guard:** `let destroyed = false; if (destroyed) return; destroyed = true;`
+
+**Criteri di STOP:**
 - 3 fallimenti consecutivi sullo stesso step;
-- ti serve una dipendenza non prevista;
-- il diff di un singolo step supera 400 righe;
+- dipendenza non prevista;
+- diff > 400 righe;
 - qualunque cosa tocchi segreti.
 
 ---
@@ -218,22 +256,7 @@ node scripts/legal-lint.mjs
 
 ---
 
-**Data:** 2026-07-12 · **Esecutore:** Claude Sonnet 4.6 (nova-shield)
-
-| Step | File | Risultato |
-|------|------|-----------|
-| sim.ts | src/games/nova-shield/sim.ts | ✅ creato, zero Math.random() |
-| sim.test.ts | src/games/nova-shield/sim.test.ts | ✅ 5/5 test verdi al primo tentativo |
-| index.ts | src/games/nova-shield/index.ts | ✅ destroy() guard + loop.stop() + input.destroy() |
-| index.test.ts | src/games/nova-shield/index.test.ts | ✅ 4/4 test verdi |
-| catalog.ts | src/catalog.ts | ✅ entry aggiunta |
-| DECISIONS.md+ASSETS.md | DECISIONS.md, ASSETS.md | ✅ 5 righe + 1 riga |
-| verifica | tsc+vitest+build | ✅ tutto verde |
-
-**Tests:** 31/31 passing (9 file)
-**Build:** nova-shield 2.02 kB gzip · vector-duel 2.45 kB · shell 4.76 kB (tutti < 30 kB ✅)
-**Note:** legal-lint riporta false positive su "rom" (substring di "from") — bug pre-esistente nel script, non introdotto da questo game
-**ITERATION_STATUS:** READY_FOR_REVIEW
+<!-- chrome-rush — da compilare dall'Esecutore -->
 
 ---
 

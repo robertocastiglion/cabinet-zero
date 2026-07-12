@@ -16,8 +16,8 @@ function saveScore(slug: string, score: number): boolean {
   return false;
 }
 
-// ── counter animation ─────────────────────────────────────────────────────────
-function animateCounter(el: HTMLElement, target: number, ms = 900) {
+// ── score count-up animation ──────────────────────────────────────────────────
+function animateCounter(el: HTMLElement, target: number, ms = 950) {
   const t0 = Date.now();
   function tick() {
     const p = Math.min((Date.now() - t0) / ms, 1);
@@ -31,114 +31,156 @@ function animateCounter(el: HTMLElement, target: number, ms = 900) {
 // ── animated SVG art per card ─────────────────────────────────────────────────
 function makeArt(slug: string, ac: string): string {
   if (slug === 'vector-duel') {
-    return `<svg viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg"
-      style="width:100%;height:100%;opacity:.75;overflow:visible">
+    return `<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg"
+      style="width:100%;height:100%;opacity:.8;overflow:visible">
       <defs><style>
-        .vd-ship{transform-origin:100px 70px;animation:ship-spin 12s linear infinite}
-        .vd-r1{transform-origin:100px 70px;animation:rock-cw 8s linear infinite}
-        .vd-r2{transform-origin:100px 70px;animation:rock-ccw 13s linear infinite}
-        .vd-r3{transform-origin:100px 70px;animation:rock-cw 18s linear infinite reverse}
-        @keyframes ship-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-        @keyframes rock-cw  {from{transform:rotate(0)}to{transform:rotate(360deg)}}
-        @keyframes rock-ccw {from{transform:rotate(0)}to{transform:rotate(-360deg)}}
+        .vd-ship{transform-origin:100px 75px;animation:vd-spin 12s linear infinite}
+        .vd-r1{transform-origin:100px 75px;animation:vd-cw 8s linear infinite}
+        .vd-r2{transform-origin:100px 75px;animation:vd-ccw 13s linear infinite}
+        .vd-r3{transform-origin:100px 75px;animation:vd-cw 18s linear infinite reverse}
+        @keyframes vd-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+        @keyframes vd-cw  {from{transform:rotate(0)}to{transform:rotate(360deg)}}
+        @keyframes vd-ccw {from{transform:rotate(0)}to{transform:rotate(-360deg)}}
       </style></defs>
       <g class="vd-ship">
-        <polygon points="100,57 91,79 96,75 96,85 104,85 104,75 109,79"
-          fill="none" stroke="${ac}" stroke-width="1.4"/>
+        <polygon points="100,60 90,84 96,78 96,90 104,90 104,78 110,84"
+          fill="none" stroke="${ac}" stroke-width="1.5"/>
       </g>
       <g class="vd-r1">
-        <polygon points="152,70 148,62 154,56 162,58 165,66 161,74 154,74"
-          fill="none" stroke="${ac}" stroke-width="1.2" opacity=".8"/>
+        <polygon points="154,75 150,65 157,58 165,61 168,70 163,78 156,78"
+          fill="none" stroke="${ac}" stroke-width="1.3" opacity=".8"/>
       </g>
       <g class="vd-r2">
-        <polygon points="100,28 95,22 100,17 106,19 108,26 103,31"
-          fill="none" stroke="${ac}" stroke-width="1.1" opacity=".65"/>
+        <polygon points="100,30 94,23 100,17 107,19 109,27 103,32"
+          fill="none" stroke="${ac}" stroke-width="1.1" opacity=".6"/>
       </g>
       <g class="vd-r3">
-        <polygon points="48,70 45,65 48,61 53,63 54,68 50,72"
+        <polygon points="47,75 44,69 48,64 54,66 55,72 50,77"
           fill="none" stroke="${ac}" stroke-width="1" opacity=".5"/>
       </g>
-      <circle cx="130" cy="48" r="1.5" fill="${ac}" opacity=".9"/>
-      <circle cx="72"  cy="88" r="1.5" fill="${ac}" opacity=".7"/>
-      <circle cx="140" cy="100" r="1" fill="${ac}" opacity=".5"/>
+      <circle cx="132" cy="50" r="1.5" fill="${ac}" opacity=".9"/>
+      <circle cx="70"  cy="95" r="1.5" fill="${ac}" opacity=".7"/>
+      <circle cx="143" cy="105" r="1" fill="${ac}" opacity=".5"/>
     </svg>`;
   }
 
   if (slug === 'nova-shield') {
-    return `<svg viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg"
-      style="width:100%;height:100%;opacity:.8;overflow:visible">
-      <defs>
-        <style>
-          .ns-shield{transform-origin:100px 70px;animation:ns-rot 3s linear infinite}
-          .ns-b1{animation:ns-bolt1 4s linear infinite}
-          .ns-b2{animation:ns-bolt2 5.5s linear infinite 1.2s}
-          .ns-b3{animation:ns-bolt3 4.8s linear infinite 2.8s}
-          .ns-core{animation:ns-pulse 1.8s ease-in-out infinite}
-          @keyframes ns-rot{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-          @keyframes ns-bolt1{0%{opacity:0;transform:translate(0,0)}20%{opacity:1}80%{opacity:.9}100%{opacity:0;transform:translate(-38px,18px)}}
-          @keyframes ns-bolt2{0%{opacity:0;transform:translate(0,0)}20%{opacity:1}80%{opacity:.8}100%{opacity:0;transform:translate(15px,-32px)}}
-          @keyframes ns-bolt3{0%{opacity:0;transform:translate(0,0)}20%{opacity:.9}80%{opacity:.7}100%{opacity:0;transform:translate(30px,22px)}}
-          @keyframes ns-pulse{0%,100%{r:6;fill:white}50%{r:8;fill:#ff6688}}
-        </style>
-      </defs>
-      <!-- orbit ring -->
-      <circle cx="100" cy="70" r="42" fill="none" stroke="${ac}" stroke-width=".6" stroke-dasharray="4 3" opacity=".3"/>
-      <!-- death ring -->
-      <circle cx="100" cy="70" r="10" fill="none" stroke="#ff2244" stroke-width=".8" opacity=".5"/>
-      <!-- shield arc -->
+    return `<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg"
+      style="width:100%;height:100%;opacity:.85;overflow:visible">
+      <defs><style>
+        .ns-shield{transform-origin:100px 75px;animation:ns-rot 3s linear infinite}
+        .ns-b1{animation:ns-b1k 3.8s linear infinite}
+        .ns-b2{animation:ns-b2k 5.2s linear infinite 1.4s}
+        .ns-b3{animation:ns-b3k 4.5s linear infinite 2.6s}
+        .ns-core{animation:ns-pulse 1.9s ease-in-out infinite}
+        @keyframes ns-rot{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+        @keyframes ns-b1k{0%{opacity:0;transform:translate(0,0)}15%{opacity:1}85%{opacity:.9}100%{opacity:0;transform:translate(-40px,20px)}}
+        @keyframes ns-b2k{0%{opacity:0;transform:translate(0,0)}15%{opacity:1}85%{opacity:.8}100%{opacity:0;transform:translate(18px,-34px)}}
+        @keyframes ns-b3k{0%{opacity:0;transform:translate(0,0)}15%{opacity:.9}85%{opacity:.7}100%{opacity:0;transform:translate(32px,24px)}}
+        @keyframes ns-pulse{0%,100%{r:6;fill:white}50%{r:9;fill:#ff5577}}
+      </style></defs>
+      <circle cx="100" cy="75" r="44" fill="none" stroke="${ac}" stroke-width=".7" stroke-dasharray="4 3" opacity=".3"/>
+      <circle cx="100" cy="75" r="11" fill="none" stroke="#ff2244" stroke-width=".9" opacity=".55"/>
       <g class="ns-shield">
-        <path d="M142,70 A42,42 0 0,0 121,33.6" fill="none" stroke="${ac}" stroke-width="3.5" stroke-linecap="round" opacity=".9"/>
-        <path d="M142,70 A42,42 0 0,0 121,33.6" fill="none" stroke="${ac}" stroke-width="7" stroke-linecap="round" opacity=".15"/>
+        <path d="M144,75 A44,44 0 0,0 122,37" fill="none" stroke="${ac}" stroke-width="4" stroke-linecap="round" opacity=".95"/>
+        <path d="M144,75 A44,44 0 0,0 122,37" fill="none" stroke="${ac}" stroke-width="9" stroke-linecap="round" opacity=".12"/>
       </g>
-      <!-- bolts -->
-      <circle class="ns-b1" cx="170" cy="30" r="3" fill="#4488ff" opacity="0"/>
-      <circle class="ns-b2" cx="30"  cy="100" r="3" fill="#6644ff" opacity="0"/>
-      <circle class="ns-b3" cx="160" cy="110" r="2.5" fill="#ff6644" opacity="0"/>
-      <!-- core -->
-      <circle class="ns-core" cx="100" cy="70" r="6" fill="white" opacity=".9"/>
+      <circle class="ns-b1" cx="172" cy="28" r="3.5" fill="#4488ff" opacity="0"/>
+      <circle class="ns-b2" cx="28"  cy="108" r="3.5" fill="#6644ff" opacity="0"/>
+      <circle class="ns-b3" cx="162" cy="118" r="3" fill="#ff6644" opacity="0"/>
+      <circle class="ns-core" cx="100" cy="75" r="6" fill="white" opacity=".9"/>
+    </svg>`;
+  }
+
+  if (slug === 'chrome-rush') {
+    return `<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg"
+      style="width:100%;height:100%;opacity:.85;overflow:visible">
+      <defs><style>
+        .cr-player{animation:cr-run .6s steps(2) infinite}
+        .cr-e1{animation:cr-walk1 2.4s linear infinite}
+        .cr-e2{animation:cr-walk2 3.1s linear infinite 0.8s}
+        .cr-bul{animation:cr-shot 1.1s linear infinite}
+        @keyframes cr-run{0%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+        @keyframes cr-walk1{0%{transform:translateX(0)}100%{transform:translateX(-80px)}}
+        @keyframes cr-walk2{0%{transform:translateX(0)}100%{transform:translateX(-100px)}}
+        @keyframes cr-shot{0%{transform:translateX(0);opacity:1}100%{transform:translateX(90px);opacity:0}}
+      </style></defs>
+      <!-- floor -->
+      <line x1="10" y1="118" x2="190" y2="118" stroke="${ac}" stroke-width="1.5" opacity=".6"/>
+      <!-- city silhouette bg -->
+      <rect x="10" y="88" width="18" height="30" fill="#0a0a1e" opacity=".8"/>
+      <rect x="35" y="78" width="12" height="40" fill="#0a0a1e" opacity=".8"/>
+      <rect x="155" y="82" width="20" height="36" fill="#0a0a1e" opacity=".8"/>
+      <rect x="178" y="72" width="14" height="46" fill="#0a0a1e" opacity=".8"/>
+      <!-- enemy 1 (walker, red) -->
+      <g class="cr-e1" transform-origin="160px 118px">
+        <circle cx="160" cy="104" r="8" fill="none" stroke="#ff4422" stroke-width="1.2"/>
+        <rect x="154" y="112" width="12" height="6" fill="none" stroke="#ff4422" stroke-width="1.1"/>
+        <line x1="156" y1="118" x2="153" y2="124" stroke="#ff4422" stroke-width="1"/>
+        <line x1="162" y1="118" x2="165" y2="124" stroke="#ff4422" stroke-width="1"/>
+      </g>
+      <!-- enemy 2 (runner, orange) -->
+      <g class="cr-e2" transform-origin="178px 118px">
+        <polygon points="178,96 172,110 184,110" fill="none" stroke="#ff9900" stroke-width="1.2"/>
+        <line x1="174" y1="110" x2="172" y2="118" stroke="#ff9900" stroke-width="1"/>
+        <line x1="182" y1="110" x2="184" y2="118" stroke="#ff9900" stroke-width="1"/>
+      </g>
+      <!-- player -->
+      <g class="cr-player" transform-origin="80px 118px">
+        <circle cx="80" cy="97" r="6" fill="none" stroke="${ac}" stroke-width="1.3"/>
+        <polygon points="80,103 72,116 88,116" fill="none" stroke="${ac}" stroke-width="1.2"/>
+        <line x1="74" y1="116" x2="72" y2="124" stroke="${ac}" stroke-width="1"/>
+        <line x1="86" y1="116" x2="88" y2="124" stroke="${ac}" stroke-width="1"/>
+        <!-- arm pointing right -->
+        <line x1="86" y1="108" x2="94" y2="108" stroke="${ac}" stroke-width="1.3"/>
+      </g>
+      <!-- bullet -->
+      <g class="cr-bul" transform-origin="96px 108px">
+        <rect x="96" y="106" width="12" height="4" rx="1" fill="#00ffcc" opacity=".9"/>
+      </g>
     </svg>`;
   }
 
   // generic starfield
-  const pts = Array.from({ length: 22 }, (_, i) => {
+  const pts = Array.from({ length: 24 }, (_, i) => {
     const x = ((i * 41 + 17) % 180) + 10;
-    const y = ((i * 59 + 11) % 120) + 10;
+    const y = ((i * 59 + 11) % 130) + 10;
     const r = i % 4 === 0 ? 2 : 1;
     const op = (.3 + (i % 5) * .12).toFixed(2);
     return `<circle cx="${x}" cy="${y}" r="${r}" fill="${ac}" opacity="${op}"/>`;
   }).join('');
-  return `<svg viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg"
+  return `<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg"
     style="width:100%;height:100%">${pts}</svg>`;
 }
 
 // ── starfield ─────────────────────────────────────────────────────────────────
 function buildStarfield(container: HTMLElement) {
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 44; i++) {
     const s = document.createElement('span');
-    const dur = 6 + Math.random() * 14;
-    s.style.cssText = `left:${Math.random()*100}%;width:${Math.random()<.15?2:1}px;height:${Math.random()<.15?2:1}px;
-      opacity:${(.2 + Math.random() * .5).toFixed(2)};
-      animation-duration:${dur.toFixed(1)}s;animation-delay:${(-(Math.random()*dur)).toFixed(1)}s`;
+    const size = Math.random() < .12 ? 2 : 1;
+    const dur  = 7 + Math.random() * 16;
+    s.style.cssText = `
+      left:${(Math.random()*100).toFixed(1)}%;
+      width:${size}px;height:${size}px;
+      opacity:${(.15 + Math.random()*.5).toFixed(2)};
+      animation-duration:${dur.toFixed(1)}s;
+      animation-delay:${(-(Math.random()*dur)).toFixed(1)}s`;
     container.appendChild(s);
   }
 }
 
-// ── ticker content ─────────────────────────────────────────────────────────────
+// ── ticker ────────────────────────────────────────────────────────────────────
 function buildTicker(track: HTMLElement) {
   const items: string[] = [];
   for (const e of CATALOG) {
-    items.push(`<span class="ticker-item accent">◆ ${e.title.toUpperCase()}</span>`);
+    items.push(`<span class="ticker-item accent">◆ ${e.title}</span>`);
     items.push(`<span class="ticker-item">${e.tagline}</span>`);
     items.push(`<span class="ticker-sep">///</span>`);
   }
   items.push(`<span class="ticker-item">CABINET ZERO</span>`);
-  items.push(`<span class="ticker-item">GIOCHI ORIGINALI</span>`);
   items.push(`<span class="ticker-sep">///</span>`);
-  items.push(`<span class="ticker-item">ZERO IP DI TERZI</span>`);
+  items.push(`<span class="ticker-item accent">GIOCHI ORIGINALI — ZERO IP DI TERZI</span>`);
   items.push(`<span class="ticker-sep">///</span>`);
-  items.push(`<span class="ticker-item accent">INSERT COIN TO CONTINUE</span>`);
-  items.push(`<span class="ticker-sep">///</span>`);
-  // duplicate for seamless loop
   const html = items.join('');
   track.innerHTML = html + html;
 }
@@ -154,15 +196,30 @@ app.innerHTML = `
     <div class="retro-grid"></div>
     <h1 class="site-title" data-text="CABINET ZERO">CABINET ZERO</h1>
     <p class="site-sub">giochi arcade originali &mdash; zero IP di terzi</p>
-    <span class="insert-coin">▶ INSERT COIN ◀</span>
+    <div class="hero-meta">
+      <div class="hero-chip">
+        <span class="hero-chip-label">GIOCHI</span>
+        <span class="hero-chip-val" id="chip-games">0</span>
+      </div>
+      <div class="hero-divider"></div>
+      <div class="hero-chip hl">
+        <span class="hero-chip-label">RECORD</span>
+        <span class="hero-chip-val" id="chip-best">—</span>
+      </div>
+      <div class="hero-divider"></div>
+      <div class="hero-chip">
+        <span class="hero-chip-label">ANNO</span>
+        <span class="hero-chip-val">2025</span>
+      </div>
+    </div>
   </header>
 
   <div id="ticker"><div class="ticker-track" id="ticker-track"></div></div>
 
   <main id="grid-view">
-    <div class="grid-header">
-      <p class="grid-label">SELECT GAME</p>
-      <span class="grid-count" id="grid-count"></span>
+    <div class="section-head">
+      <span class="section-label">LIBRERIA GIOCHI</span>
+      <span class="section-count" id="grid-count"></span>
     </div>
     <div class="games-grid" id="games-grid"></div>
   </main>
@@ -181,7 +238,8 @@ app.innerHTML = `
       <div id="canvas-wrap">
         <canvas id="game-canvas"></canvas>
         <div id="controls-hint">
-          <span class="hint-key"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>&nbsp;/&nbsp;<kbd>↑←↓→</kbd>&nbsp;MOVE</span>
+          <span class="hint-key"><kbd>←</kbd><kbd>→</kbd>&nbsp;MOVE</span>
+          <span class="hint-key"><kbd>W</kbd>&nbsp;JUMP</span>
           <span class="hint-key"><kbd>SPACE</kbd>&nbsp;FIRE</span>
           <span class="hint-key"><kbd>ESC</kbd>&nbsp;EXIT</span>
         </div>
@@ -192,13 +250,13 @@ app.innerHTML = `
             <span class="go-score-label">SCORE</span>
             <p class="go-score" id="go-score-val">0</p>
           </div>
-          <div class="go-hs-row" id="go-hs-row">
+          <div class="go-hs-row">
             <span class="go-hs-label">BEST</span>
             <span class="go-hs-val" id="go-hs-val">0</span>
           </div>
           <p class="go-new-hs hidden" id="go-new-hs">★ NEW HIGH SCORE ★</p>
           <button id="btn-restart">▶ PLAY AGAIN</button>
-          <p class="go-hint">— press ESC to exit —</p>
+          <p class="go-hint">— ESC per uscire —</p>
         </div>
       </div>
       <span id="monitor-brand">CABINET ZERO MK.I</span>
@@ -207,13 +265,20 @@ app.innerHTML = `
   </div>
 
   <footer id="site-footer">
-    <span><span class="credits-dot"></span>CABINET ZERO &mdash; opere originali, zero IP di terzi</span>
+    <span>CABINET ZERO &mdash; opere originali, zero IP di terzi</span>
     <span>Cloudflare Pages &bull; Vite &bull; TypeScript</span>
   </footer>
 `;
 
 buildStarfield(document.getElementById('stars')!);
 buildTicker(document.getElementById('ticker-track')!);
+
+// ── hero stats ────────────────────────────────────────────────────────────────
+const scores   = loadScores();
+const allBests = Object.values(scores);
+const bestScore = allBests.length > 0 ? Math.max(...allBests) : 0;
+document.getElementById('chip-games')!.textContent = String(CATALOG.length);
+document.getElementById('chip-best')!.textContent  = bestScore > 0 ? String(bestScore) : '—';
 
 // ── refs ──────────────────────────────────────────────────────────────────────
 const gridView    = document.getElementById('grid-view')!;
@@ -246,12 +311,12 @@ function popScore(val: number) {
 }
 
 // ── build grid ────────────────────────────────────────────────────────────────
-const scores = loadScores();
-gridCount.textContent = `${CATALOG.length} GAME${CATALOG.length !== 1 ? 'S' : ''} AVAILABLE`;
+gridCount.textContent = `${CATALOG.length} GIOCH${CATALOG.length !== 1 ? 'I' : 'O'}`;
 
 for (const entry of CATALOG) {
   const card = document.createElement('div');
   card.className = 'game-card';
+  card.dataset['slug'] = entry.slug;
   card.style.setProperty('--ac', entry.accent);
 
   const hs = scores[entry.slug] ?? 0;
@@ -272,12 +337,12 @@ for (const entry of CATALOG) {
       <span class="card-screen-title">${entry.title}</span>
     </div>
     <div class="card-body">
-      <p class="card-tag">▸ ${entry.year} &nbsp;/&nbsp; ${entry.slug}</p>
+      <div class="card-accent-bar"></div>
       <h3 class="card-title">${entry.title}</h3>
       <p class="card-tagline">${entry.tagline}</p>
       <div class="card-footer">
-        <span class="card-year">${entry.accent}</span>
-        <span class="card-play">PLAY ▶</span>
+        <span class="card-meta">${entry.year} &nbsp;·&nbsp; ${entry.slug}</span>
+        <span class="card-play">GIOCA ▶</span>
       </div>
     </div>
   `;
@@ -286,27 +351,35 @@ for (const entry of CATALOG) {
   gamesGrid.appendChild(card);
 }
 
-// "coming soon" ghost cards
+// "coming soon" ghost cards to fill the row
 const soonsNeeded = Math.max(0, 3 - CATALOG.length);
 for (let i = 0; i < soonsNeeded; i++) {
   const ghost = document.createElement('div');
   ghost.className = 'game-card card-soon';
   ghost.innerHTML = `
     <div class="card-screen">
-      <span class="card-screen-title" style="color:#1e1e38;opacity:1">???</span>
+      <div class="soon-screen-inner">
+        <span class="soon-qmark">?</span>
+        <span class="soon-label">COMING SOON</span>
+      </div>
     </div>
     <div class="card-body">
-      <p class="soon-label">COMING SOON</p>
+      <div class="card-accent-bar" style="opacity:.15"></div>
+      <h3 class="card-title" style="color:#1a1a3a">??? ??? ???</h3>
+      <p class="card-tagline" style="color:#0e0e28">In sviluppo...</p>
+      <div class="card-footer">
+        <span class="card-meta" style="color:#0e0e28">2025</span>
+      </div>
     </div>
   `;
   gamesGrid.appendChild(ghost);
 }
 
-// ── progress bar ──────────────────────────────────────────────────────────────
+// ── progress ──────────────────────────────────────────────────────────────────
 function progressStart() { progressFill.style.width = '35%'; }
 function progressDone()  {
   progressFill.style.width = '100%';
-  setTimeout(() => { progressFill.style.width = '0%'; }, 350);
+  setTimeout(() => { progressFill.style.width = '0%'; }, 360);
 }
 
 // ── launch ────────────────────────────────────────────────────────────────────
@@ -316,7 +389,7 @@ async function launchGame(slug: string) {
   activeSlug = slug;
   currentScore = 0;
 
-  titleHud.textContent = 'LOADING…';
+  titleHud.textContent = 'CARICAMENTO…';
   waveDsp.textContent = '';
   waveDsp.classList.remove('visible');
   gridView.classList.add('hidden');
@@ -330,7 +403,6 @@ async function launchGame(slug: string) {
   scoreDsp.textContent = '0';
   titleHud.textContent = entry.title;
 
-  // re-trigger controls hint animation
   const hintEl = document.getElementById('controls-hint');
   if (hintEl) {
     hintEl.style.animation = 'none';
@@ -347,19 +419,22 @@ async function launchGame(slug: string) {
       const best  = loadScores()[slug] ?? 0;
 
       animateCounter(goScoreVal, finalScore);
-      goHsVal.textContent    = String(best);
+      goHsVal.textContent = String(best);
       goNewHs.classList.toggle('hidden', !isNew);
       overlay.classList.add('visible');
 
       refreshCardBadge(slug, best);
+      // update hero chip
+      const allB = Object.values(loadScores());
+      const topB = allB.length > 0 ? Math.max(...allB) : 0;
+      const chipBest = document.getElementById('chip-best');
+      if (chipBest) chipBest.textContent = topB > 0 ? String(topB) : '—';
     },
   });
 }
 
 function refreshCardBadge(slug: string, best: number) {
-  const cards = gamesGrid.querySelectorAll('.game-card');
-  const idx = CATALOG.findIndex((e) => e.slug === slug);
-  const card = cards[idx] as HTMLElement | undefined;
+  const card = gamesGrid.querySelector(`.game-card[data-slug="${slug}"]`) as HTMLElement | null;
   if (!card) return;
   let badge = card.querySelector('.card-hs') as HTMLElement | null;
   if (!badge) {
@@ -367,10 +442,7 @@ function refreshCardBadge(slug: string, best: number) {
     badge.className = 'card-hs';
     card.insertBefore(badge, card.firstChild);
   }
-  badge.innerHTML = `
-    <span class="card-hs-label">BEST</span>
-    <span class="card-hs-val">${best}</span>
-  `;
+  badge.innerHTML = `<span class="card-hs-label">BEST</span><span class="card-hs-val">${best}</span>`;
 }
 
 // ── exit ──────────────────────────────────────────────────────────────────────
