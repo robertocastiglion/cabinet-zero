@@ -58,106 +58,141 @@ export interface GameHandle {
 
 ## STATO CORRENTE
 
-- Repo vuoto (o con solo README). Nessun codice.
-- **Obiettivo del ciclo 1:** scaffold Vite+TS+Pages, griglia giochi da catalogo statico, e **un gioco giocabile**: `vector-duel` (nave con inerzia + asteroidi in wireframe, palette originale), 60 fps, punteggio, game over, ritorno alla griglia.
-- **Fuori scope ciclo 1:** database, autenticazione, leaderboard, pagamenti, audio, mobile controls, secondo gioco.
+- Scaffold Vite+TS+Pages ✅, motore ✅, vector-duel ✅, shell ✅, deploy Cloudflare Pages ✅
+- **Ciclo 2 in corso:** secondo gioco originale — nova-shield (deflettore rotazionale)
 
 ---
 
 ## [PROSSIMO TASK]
 
-Esegui **in ordine**, uno alla volta. Dopo ognuno lancia il comando di verifica indicato.
-Se un comando fallisce: max 2 tentativi di fix, poi FERMATI e scrivi in REPORT ESECUZIONE.
+### GAME: nova-shield
 
-### T0 — Bootstrap (eccezione alla regola dei 2 file: è lo scaffold)
-- [ ] Crea `package.json` (pnpm, scripts: `dev`, `build`, `preview`, `typecheck`, `test`), `tsconfig.json` (strict + noUncheckedIndexedAccess), `vite.config.ts` (con config Vitest: environment `jsdom`), `.gitignore` (node_modules, dist, .wrangler, .dev.vars, .env*), `index.html`, `src/styles.css`, `src/main.ts` (placeholder che scrive "ok" nel DOM).
-- [ ] Crea `DECISIONS.md` e `ASSETS.md` vuoti con solo l'intestazione.
-- [ ] **Verifica:** `pnpm install && pnpm typecheck && pnpm build` → esce 0 e produce `dist/index.html`.
+**Title:** NOVA SHIELD
+**Slug:** nova-shield
+**Accent:** #ff6600
 
-### T1 — Game loop a timestep fisso
-- [ ] `src/engine/types.ts`: `GameModule`, `GameOpts`, `GameHandle` (copiali dalla COSTITUZIONE, non reinventarli).
-- [ ] `src/engine/loop.ts`: `createLoop({ step, render, now?, raf?, cancelRaf? })` → `{ start(), stop() }`. Timestep fisso a **1/60 s**, accumulatore, **clamp del frame time a 250 ms** (anti spiral-of-death, max 5 step per frame). `now`, `raf` e `cancelRaf` sono iniettabili per i test.
-- [ ] `src/engine/loop.test.ts`:
-  - con `now` finto che avanza di 16.7 ms, dopo 60 frame `step` è stato chiamato ~60 volte (tolleranza ±2);
-  - con un frame di 5000 ms, `step` viene chiamato **al massimo 5 volte** (clamp);
-  - dopo `stop()`, `step` non viene più chiamato e `cancelRaf` è stato invocato.
-- [ ] **Verifica:** `pnpm test -- loop`
+#### Core mechanic
+- **Verb:** deflect
+- **Loop:** energy bolts fly from the arena edges toward the center; player rotates a shield arc to intercept them before they reach the core
+- **Escalation:** each wave adds more simultaneous bolts and increases their speed; wave bonus every 10 deflections
+- **Game over:** any bolt reaches within 18px of the center (the player's core)
+- **Fun insight:** the rotation mechanic creates split-second "which bolt to save first" decisions — satisfying when you barely catch one, tense when two converge at once
 
-### T2 — Input
-- [ ] `src/engine/input.ts`: `createInput(target: EventTarget)` → `{ isDown(code: string): boolean; destroy(): void }`. Usa `event.code` (mai `keyCode`). `destroy()` **deve rimuovere entrambi i listener** (keydown/keyup).
-- [ ] `src/engine/input.test.ts`: dispatch di `KeyboardEvent` su un target jsdom → `isDown('ArrowLeft')` true/false; dopo `destroy()`, nuovi eventi non cambiano più lo stato.
-- [ ] **Verifica:** `pnpm test -- input`
+#### sim.ts architecture
 
-### T3 — Catalogo
-- [ ] `src/catalog.ts`: tipo `GameEntry { slug, title, tagline, year: string, accent: string, load: () => Promise<GameModule> }` + array `CATALOG` con **una sola entry**: `vector-duel` (import dinamico, così i giochi non finiscono nel bundle iniziale).
-- [ ] `src/catalog.test.ts`: gli slug sono unici; ogni entry ha tutti i campi non vuoti; nessun titolo contiene nomi di giochi esistenti (test banale su una blocklist di stringhe — serve da guardrail legale).
-- [ ] **Verifica:** `pnpm test -- catalog`
+```ts
+export const SCORE_VALUES = { deflect: 10, wave_bonus: 50 } as const;
+export const WORLD = { W: 800, H: 600 } as const;
+export const CENTER = { x: 400, y: 300 } as const;
+export const SHIELD_RADIUS = 90;          // distance of arc from center
+export const SHIELD_SPAN = Math.PI * 0.44; // ~80° arc half-angle each side = 160° total
+export const SHIELD_TURN = 2.8;           // rad/s
 
-### T4 — Vector Duel: logica pura (niente canvas, niente DOM)
-- [ ] `src/games/vector-duel/sim.ts`: stato e step della simulazione.
-  - Nave: rotazione, thrust con inerzia, attrito, wrap ai bordi, cooldown di sparo.
-  - Proiettili: velocità costante, TTL, wrap.
-  - Rocce: 3 taglie (L→M→S); alla distruzione una L genera 2 M, una M genera 2 S, una S sparisce.
-  - Collisioni: cerchio-cerchio (proiettile-roccia, nave-roccia).
-  - Punteggio: S=100, M=50, L=20 (valori in una costante esportata).
-  - Wave: quando non restano rocce, spawn della wave successiva con una roccia in più.
-  - `stepSim(state, input, dt, rng)` è **pura**: stesso input + stesso seed ⇒ stesso output.
-- [ ] `src/games/vector-duel/sim.test.ts`:
-  - determinismo: due run con lo stesso seed producono stati identici dopo 600 step;
-  - una roccia L colpita produce 2 rocce M e incrementa il punteggio di 20;
-  - la nave che esce a destra rientra a sinistra (wrap);
-  - collisione nave-roccia ⇒ `state.status === 'gameover'`;
-  - azzerate le rocce ⇒ `state.wave` incrementa.
-- [ ] **Verifica:** `pnpm test -- vector-duel/sim`
+export interface Vec2 { x: number; y: number }
 
-### T5 — Vector Duel: modulo giocabile
-- [ ] `src/games/vector-duel/index.ts`: implementa `GameModule`. Rendering canvas 2D **wireframe** (linee, palette originale definita in `catalog.ts` come `accent`). Gestisce `devicePixelRatio` (canvas nitido). Chiama `onScore` a ogni variazione di punteggio e `onGameOver` una sola volta. `destroy()` ferma il loop **e** chiama `input.destroy()`.
-- [ ] `src/games/vector-duel/index.test.ts` (jsdom, contesto 2D stubbato): `init()` non lancia; `destroy()` è idempotente e dopo di esso non arrivano più callback; `onGameOver` viene chiamato esattamente una volta.
-- [ ] **Verifica:** `pnpm test -- vector-duel`
+export interface Bolt {
+  id: number;
+  pos: Vec2;
+  vel: Vec2;  // always pointed roughly toward CENTER, speed varies
+}
 
-### T6 — Shell: griglia e montaggio
-- [ ] `src/main.ts`: renderizza la griglia delle card da `CATALOG`; click su una card → import dinamico del modulo, crea il canvas, `init()`; tasto `Escape` o bottone "Indietro" → `destroy()` e ritorno alla griglia. Mostra punteggio corrente e schermata di game over con punteggio finale.
-- [ ] `src/main.test.ts` (jsdom): la griglia renderizza 1 card; il click monta un `<canvas>`; l'uscita rimuove il canvas e chiama `destroy()`.
-- [ ] **Verifica:** `pnpm test && pnpm typecheck && pnpm build`
+export interface SimInput {
+  left: boolean;
+  right: boolean;
+}
 
-### T7 — Deploy Cloudflare Pages
-- [ ] `wrangler.toml` (`pages_build_output_dir = "dist"`, `compatibility_date` odierna) + sezione "Deploy" in `README.md` con i passi esatti.
-- [ ] **Verifica:** `pnpm build` produce `dist/index.html`; il bundle iniziale (esclusi i chunk dei giochi) è **< 30 kB gzip** — controllalo dall'output di Vite.
-- [ ] ⚠️ **NON eseguire un deploy reale.** Il deploy lo lancia l'umano. Se vuoi validare la config, limitati a un controllo del file, non a un comando che pubblica.
+export interface SimState {
+  shieldAngle: number;      // radians, 0 = right, increases clockwise
+  bolts: Bolt[];
+  score: number;
+  wave: number;
+  deflected: number;        // total deflections this wave
+  spawnTimer: number;       // counts down to next bolt spawn
+  spawnInterval: number;    // seconds between spawns (decreases with wave)
+  status: 'playing' | 'gameover';
+}
+
+// Exported for tests
+export function createSim(rng: () => number): SimState
+export function stepSim(state: SimState, input: SimInput, dt: number, rng: () => number): SimState
+```
+
+**stepSim logic (pure, no side effects):**
+1. Update shieldAngle: `+= (right ? 1 : left ? -1 : 0) * SHIELD_TURN * dt`; wrap to [0, 2π)
+2. Update each bolt: `pos += vel * dt`
+3. **Shield collision check:** for each bolt, compute `dist = distance(bolt.pos, CENTER)`. If `dist <= SHIELD_RADIUS + 6` AND `dist >= SHIELD_RADIUS - 20`:
+   - compute `boltAngle = atan2(bolt.pos.y - CENTER.y, bolt.pos.x - CENTER.x)`
+   - compute angular diff vs shieldAngle, normalize to (−π, π)
+   - if `|angularDiff| <= SHIELD_SPAN`: deflect → reverse radial velocity component (bolt bounces away from center); score += SCORE_VALUES.deflect; deflected++
+4. **Wave check:** if `deflected >= 5 + wave * 2` → wave++, score += SCORE_VALUES.wave_bonus, deflected = 0, spawnInterval *= 0.85
+5. **Death check:** for each bolt, if `distance(bolt.pos, CENTER) < 18` → status = 'gameover'
+6. **Remove bolts** that have traveled far enough to be off-screen (distance > 700) or have been deflected (track via a `deflected` flag on bolt, or filter in collision)
+7. **Spawn timer:** spawnTimer -= dt; when ≤ 0: spawn new bolt from random edge at radius 480–500 from center, velocity aimed at CENTER ± small random offset (use rng), speed = 130 + wave * 18 + rng()*30; reset spawnTimer = spawnInterval
+
+**Bolt spawning:** pick random angle θ = rng() * 2π, pos = (CENTER.x + cos(θ)*490, CENTER.y + sin(θ)*490), vel aimed at CENTER with speed variance.
+
+#### Rendering
+- **bg:** `#030308`
+- **Arena:** faint concentric rings at r=90 (shield orbit, dashed), r=18 (death zone, red pulsing), r=40 (inner warning ring)
+- **Shield:** arc drawn with `ctx.arc(CENTER.x, CENTER.y, SHIELD_RADIUS, shieldAngle - SHIELD_SPAN, shieldAngle + SHIELD_SPAN)`, thick stroke `#ff6600`, glow via shadow
+- **Core:** filled circle r=10 at CENTER, color white normally, flashes red when a bolt is within r=120
+- **Bolts:** small filled circles r=5, color interpolated from `#4488ff` (slow) to `#ff2244` (fast) based on speed; glow
+- **Deflection sparks:** on deflect, draw 4–6 short lines radiating from collision point (can be done purely in render with a `lastDeflect` field in state holding position + age)
+- **Special effect:** bolt trail — draw 3 fading smaller circles behind each bolt position (use `ttl` or derive from position + velocity extrapolation)
+
+#### 5 tests (exact descriptions for sim.test.ts)
+
+1. **Determinism:** run `createSim(rng42)` then 300 `stepSim` calls with no input and fixed rng seed — repeat with identical seed → `state.score`, `state.wave`, `state.shieldAngle` must be identical
+2. **Shield deflects bolt:** place a bolt at `(CENTER.x + SHIELD_RADIUS - 5, CENTER.y)` moving toward center, set `shieldAngle = 0` (shield centered right) → after one step, bolt's x-velocity should reverse (moving away from center)
+3. **Bolt reaching core causes gameover:** place bolt at `(CENTER.x + 17, CENTER.y)` moving left at speed 200, no shield coverage → after one step `state.status === 'gameover'`
+4. **Wave increments on enough deflections:** create state with `deflected = 5 + wave * 2 - 1` (one short of threshold), trigger one more deflection manually via positioned bolt + aligned shield → `state.wave` increments by 1
+5. **destroy() idempotent, onGameOver ≤ 1 time** (index.test.ts)
 
 ---
 
 ## [NOTE DI PASSAGGIO]
 
-**Stato:** progetto da zero. Nessun contesto pregresso da caricare: **non esplorare la codebase**, non esiste.
+**Stato:** scaffold completo. Engine (loop, input, types), vector-duel, shell, CI tutti funzionanti.
+**Gioco da implementare:** nova-shield (vedi PROSSIMO TASK sopra).
 
-**File modificabili (whitelist):** tutto ciò che è elencato nei task T0–T7. Nient'altro.
+**File modificabili (whitelist):**
+- `src/games/nova-shield/sim.ts` (da creare)
+- `src/games/nova-shield/sim.test.ts` (da creare)
+- `src/games/nova-shield/index.ts` (da creare)
+- `src/games/nova-shield/index.test.ts` (da creare)
+- `src/catalog.ts` (aggiungere entry)
+- `DECISIONS.md` (appendere 5 righe)
+- `ASSETS.md` (appendere 1 riga)
+- `CLAUDE.MD` (solo REPORT ESECUZIONE)
 
-**File VIETATI:** qualunque file contenente segreti; `.github/**`; qualunque cosa fuori dalla radice del progetto.
+**File VIETATI:** qualsiasi altro file, in particolare `src/main.ts`, `src/styles.css`, `src/engine/*`, `.github/**`, file con segreti.
 
-**Istruzioni rigorose per l'esecutore — le 6 trappole in cui cadrai:**
-
-1. **Delta-time variabile.** Se aggiorni la fisica con il dt del frame, il gioco va più veloce sui monitor a 144 Hz. Usa l'accumulatore a timestep fisso di T1. Non ci sono eccezioni.
-2. **Listener non rimossi.** Se `destroy()` non chiama `removeEventListener`, al secondo avvio del gioco l'input arriva doppio e il primo loop continua a girare in background. È il bug più probabile di tutto il ciclo.
-3. **`Math.random()` nella simulazione.** Rende i test non deterministici. L'RNG si passa come dipendenza (`opts.rng`). Nei test usa un generatore seedato (es. mulberry32, scritto a mano in 5 righe — non installare una libreria).
-4. **Canvas sfocato.** Imposta `canvas.width = cssWidth * devicePixelRatio` e scala il contesto. Non dimenticarlo, altrimenti il wireframe è illeggibile.
-5. **Tentazione di installare Phaser / lodash / uuid.** Vietato. Il ciclo 1 gira a **zero dipendenze runtime**. Se pensi di averne bisogno, ti sbagli: fermati e segnalalo.
-6. **Nomi e asset.** Non chiamare nulla come un gioco esistente, nemmeno nei commenti, nei test o nei placeholder. Se ti serve un nome, inventalo.
-
-**Comandi di test esatti:**
+**Comandi di test esatti (pnpm 11 workaround — usa i binari direttamente):**
+```powershell
+.\node_modules\.bin\tsc --noEmit
+.\node_modules\.bin\vitest run
+node scripts/legal-lint.mjs
+.\node_modules\.bin\vite build
+```
 ```bash
-pnpm install
-pnpm typecheck          # tsc --noEmit
-pnpm test               # vitest run
-pnpm test -- <pattern>  # per il singolo task
-pnpm build              # vite build
+# pattern specifico
+.\node_modules\.bin\vitest run nova-shield/sim
+.\node_modules\.bin\vitest run nova-shield
 ```
 
-**Criteri di STOP (fermati e chiedi all'umano):**
-- 3 fallimenti consecutivi sullo stesso task;
+**Trappole specifiche per nova-shield:**
+1. **Deflect come deep copy:** `stepSim` è pura — non mutare l'array `bolts`, restituisci sempre nuovi oggetti.
+2. **Angular wrap:** quando calcoli la differenza angolare shieldAngle−boltAngle, normalizzala a (−π, π) con `((diff + Math.PI) % (2*Math.PI)) - Math.PI`.
+3. **Bolt rimossi dopo il deflect:** un bolt deflesso deve essere rimosso dalla lista (o flaggato), altrimenti viene controllato più volte nello stesso frame.
+4. **Wave check:** controlla wave DOPO aver aggiornato `deflected`, non prima.
+5. **destroy() guard:** usa un flag `let destroyed = false; if (destroyed) return; destroyed = true;` all'inizio di destroy().
+6. **Nessun Math.random() in sim.ts.** Il mulberry32 per i test è già in `src/games/vector-duel/sim.test.ts` — copialo.
+
+**Criteri di STOP (fermati e scrivi in REPORT ESECUZIONE):**
+- 3 fallimenti consecutivi sullo stesso step;
 - ti serve una dipendenza non prevista;
-- il diff di un singolo task supera 400 righe;
-- qualunque cosa tocchi segreti o un deploy reale.
+- il diff di un singolo step supera 400 righe;
+- qualunque cosa tocchi segreti.
 
 ---
 
