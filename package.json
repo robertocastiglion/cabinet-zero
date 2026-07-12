@@ -9,11 +9,10 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "game:new": "node scripts/game-loop.mjs",
-    "game:new:brief": "node scripts/game-loop.mjs --brief"
+    "game:new": "powershell -File scripts/game-loop.ps1",
+    "game:new:brief": "powershell -File scripts/game-loop.ps1 -Brief"
   },
   "devDependencies": {
-    "@anthropic-ai/sdk": "^0.30.0",
     "@types/node": "^20.14.0",
     "jsdom": "^24.1.0",
     "typescript": "^5.5.0",
