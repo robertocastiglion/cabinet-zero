@@ -218,6 +218,25 @@ node scripts/legal-lint.mjs
 
 ---
 
+**Data:** 2026-07-12 · **Esecutore:** Claude Sonnet 4.6 (nova-shield)
+
+| Step | File | Risultato |
+|------|------|-----------|
+| sim.ts | src/games/nova-shield/sim.ts | ✅ creato, zero Math.random() |
+| sim.test.ts | src/games/nova-shield/sim.test.ts | ✅ 5/5 test verdi al primo tentativo |
+| index.ts | src/games/nova-shield/index.ts | ✅ destroy() guard + loop.stop() + input.destroy() |
+| index.test.ts | src/games/nova-shield/index.test.ts | ✅ 4/4 test verdi |
+| catalog.ts | src/catalog.ts | ✅ entry aggiunta |
+| DECISIONS.md+ASSETS.md | DECISIONS.md, ASSETS.md | ✅ 5 righe + 1 riga |
+| verifica | tsc+vitest+build | ✅ tutto verde |
+
+**Tests:** 31/31 passing (9 file)
+**Build:** nova-shield 2.02 kB gzip · vector-duel 2.45 kB · shell 4.76 kB (tutti < 30 kB ✅)
+**Note:** legal-lint riporta false positive su "rom" (substring di "from") — bug pre-esistente nel script, non introdotto da questo game
+**ITERATION_STATUS:** READY_FOR_REVIEW
+
+---
+
 ## [REPORT VERIFICA]
 
 <!-- Compilato dal Verificatore. PASS / FAIL + causa precisa + file:riga.
