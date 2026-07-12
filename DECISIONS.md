@@ -19,3 +19,8 @@
 | nova-shield | Game over: proiettile dentro r=18 (core) | Vite limitata | Visivamente chiaro: zona rossa al centro = morte |
 | nova-shield | Escalation: +1 wave ogni N deflect, velocità +18px/s | Wave a tempo | Il giocatore controlla il ritmo — più è bravo più è dura |
 | nova-shield | Design originale: nessun clone | — | Non emula nessun titolo; genere "deflettore concentrico" originale |
+| chrome-rush | Meccanica: run-and-gun piattaforma singola | Multi-livello con salti | Piattaforma singola + gravity keeps physics tractable in one pass |
+| chrome-rush | Loop: kill waves, spawnInterval decrescente | Wave a tempo | Il giocatore controlla il ritmo avanzando kill → mantiene l'agency |
+| chrome-rush | Game over: 3 HP, contatto fisico con nemici | Proiettili nemici | Rimuove gestione proiettili nemici → rendering + sim più semplici, feel più diretto |
+| chrome-rush | Escalation: runner da wave 2, velocità +10/+13 px/s per wave | Solo walker | Varietà visiva e tattica senza aggiungere un terzo tipo di entity |
+| chrome-rush | Design originale: genere run-and-gun, ambientazione cyber | — | Zero assets derivati; meccanica facing-to-shoot è originale; nessun clone |

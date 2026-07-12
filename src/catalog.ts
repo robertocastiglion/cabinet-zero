@@ -26,4 +26,12 @@ export const CATALOG: GameEntry[] = [
     accent: '#ff6600',
     load: () => import('./games/nova-shield/index').then((m) => m.default),
   },
+  {
+    slug: 'chrome-rush',
+    title: 'CHROME RUSH',
+    tagline: 'Corri. Salta. Spara. Sopravvivi.',
+    year: '2025',
+    accent: '#00e676',
+    load: () => import('./games/chrome-rush/index').then((m) => m.default),
+  },
 ];

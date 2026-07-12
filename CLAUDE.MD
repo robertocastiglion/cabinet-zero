@@ -256,7 +256,24 @@ node scripts/legal-lint.mjs
 
 ---
 
-<!-- chrome-rush — da compilare dall'Esecutore -->
+**Data:** 2026-07-12 · **Esecutore:** Claude Sonnet 4.6 (chrome-rush + UI v4)
+
+| Step | File | Risultato |
+|------|------|-----------|
+| UI v4 styles | src/styles.css | ✅ Rajdhani font, card 210px, 3D hover, hero chips, section heads |
+| UI v4 main | src/main.ts | ✅ animateCounter, buildTicker, chrome-rush SVG art, progress bar |
+| sim.ts | src/games/chrome-rush/sim.ts | ✅ pure stepSim, zero Math.random() |
+| sim.test.ts | src/games/chrome-rush/sim.test.ts | ✅ 5/5 test verdi al primo tentativo |
+| index.ts | src/games/chrome-rush/index.ts | ✅ destroy() guard, 3 parallax layers, wireframe entities |
+| index.test.ts | src/games/chrome-rush/index.test.ts | ✅ 4/4 test verdi |
+| catalog.ts | src/catalog.ts | ✅ entry aggiunta |
+| DECISIONS.md+ASSETS.md | DECISIONS.md, ASSETS.md | ✅ 5 righe + 1 riga |
+| verifica | tsc+vitest+build | ✅ tutto verde |
+
+**Tests:** 41/41 passing (11 file)
+**Build:** chrome-rush 2.65 kB gzip · nova-shield 2.02 kB · vector-duel 2.45 kB · shell 5.53 kB (tutti < 30 kB ✅)
+**Note:** legal-lint false positive su "rom" (substring di "from") — bug pre-esistente nel script, nessuna violazione IP reale introdotta da chrome-rush
+**ITERATION_STATUS:** READY_FOR_REVIEW
 
 ---
 
