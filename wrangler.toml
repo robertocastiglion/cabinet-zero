@@ -1,7 +1,6 @@
+name = "cabinet-zero"
+pages_build_output_dir = "dist"
+compatibility_date = "2025-07-12"
+
 [build]
 command = "pnpm install && pnpm build"
-
-[pages_build_output_dir]
-pages_build_output_dir = "dist"
-
-compatibility_date = "2025-07-12"
