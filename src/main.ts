@@ -189,6 +189,7 @@ function buildTicker(track: HTMLElement) {
 const app = document.getElementById('app')!;
 
 app.innerHTML = `
+  <div class="bg-grid"><div class="bg-grid-inner"></div></div>
   <div id="progress-bar"><div id="progress-fill"></div></div>
 
   <header id="site-header">
@@ -329,6 +330,8 @@ for (const entry of CATALOG) {
 
   card.innerHTML = `
     <div class="corner-tl"></div>
+    <div class="corner-tr"></div>
+    <div class="corner-bl"></div>
     <div class="corner-br"></div>
     ${hsHtml}
     <div class="card-screen">
