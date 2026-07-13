@@ -12,6 +12,9 @@
     "game:new": "powershell -File scripts/game-loop.ps1",
     "game:new:brief": "powershell -File scripts/game-loop.ps1 -Brief"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
   "devDependencies": {
     "@types/node": "^20.14.0",
     "jsdom": "^24.1.0",
