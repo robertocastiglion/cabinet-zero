@@ -3,8 +3,9 @@ import { createLoop } from '../../engine/loop';
 import { createInput } from '../../engine/input';
 import {
   createSim, stepSim,
-  WORLD, FLOOR_Y,
+  WORLD, FLOOR_Y, SCORE_VALUES,
 } from './sim';
+import type { Enemy } from './sim';
 
 const BG         = '#010108';
 const FLOOR_COL  = '#00e676';
@@ -17,6 +18,9 @@ const HP_DEAD    = '#1a1a2e';
 const WAVE_COL   = '#00e676';
 
 const slug = 'chrome-rush';
+
+interface Particle { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; col: string; }
+interface ScorePopup { x: number; y: number; val: number; life: number; }
 
 function drawPlayer(
   ctx: CanvasRenderingContext2D,
@@ -208,8 +212,22 @@ export default {
     let gameOverFired = false;
     let bgOffset = 0;
 
+    // Visual effect state (renderer-only, not in SimState)
+    let particles: Particle[] = [];
+    let popups: ScorePopup[] = [];
+    let shakeTimer = 0;
+    const SHAKE_DUR = 0.22;
+    const SHAKE_INT = 6;
+    let prevFlashTimer = 0;
+    let prevEnemies: Enemy[] = [];
+    let prevWave = 1;
+
     const loop = createLoop({
       step() {
+        const preEnemies = state.enemies;
+        const preFlash   = state.player.flashTimer;
+        const preWave    = state.wave;
+
         const inp = {
           left:  input.isDown('ArrowLeft')  || input.isDown('KeyA'),
           right: input.isDown('ArrowRight') || input.isDown('KeyD'),
@@ -218,6 +236,51 @@ export default {
         };
         state = stepSim(state, inp, 1 / 60, opts.rng);
         bgOffset += 1 / 60;
+
+        const dt = 1 / 60;
+
+        // Screen shake on player hit
+        if (state.player.flashTimer > 0 && preFlash <= 0) {
+          shakeTimer = SHAKE_DUR;
+        }
+        prevFlashTimer = state.player.flashTimer;
+        shakeTimer = Math.max(0, shakeTimer - dt);
+
+        // Kill particles + score popups (skip on wave-advance frames to avoid explosion spam)
+        const waveAdvanced = state.wave !== preWave;
+        if (!waveAdvanced) {
+          for (const pe of preEnemies) {
+            if (!state.enemies.find(e => e.id === pe.id)) {
+              const col = pe.kind === 'walker' ? WALKER_COL : RUNNER_COL;
+              for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const speed = 60 + Math.random() * 50;
+                particles.push({
+                  x: pe.x, y: FLOOR_Y - 18,
+                  vx: Math.cos(angle) * speed,
+                  vy: Math.sin(angle) * speed - 40,
+                  life: 0.45, maxLife: 0.45, col,
+                });
+              }
+              popups.push({
+                x: pe.x, y: FLOOR_Y - 30,
+                val: SCORE_VALUES[pe.kind],
+                life: 0.7,
+              });
+            }
+          }
+        }
+
+        prevEnemies = preEnemies;
+        prevWave    = preWave;
+
+        // Advance particles and popups
+        particles = particles
+          .map(p => ({ ...p, x: p.x + p.vx * dt, y: p.y + p.vy * dt, life: p.life - dt }))
+          .filter(p => p.life > 0);
+        popups = popups
+          .map(p => ({ ...p, y: p.y - 30 * dt, life: p.life - dt }))
+          .filter(p => p.life > 0);
 
         if (state.score !== lastScore) {
           lastScore = state.score;
@@ -233,6 +296,16 @@ export default {
       render() {
         ctx.fillStyle = BG;
         ctx.fillRect(0, 0, WORLD.W, WORLD.H);
+
+        // Apply screen shake around world rendering
+        ctx.save();
+        if (shakeTimer > 0) {
+          const t = shakeTimer;
+          ctx.translate(
+            Math.sin(t * 80) * SHAKE_INT * (t / SHAKE_DUR),
+            Math.cos(t * 65) * SHAKE_INT * 0.7 * (t / SHAKE_DUR),
+          );
+        }
 
         drawCityBg(ctx, bgOffset);
         drawFloor(ctx);
@@ -272,6 +345,39 @@ export default {
           ctx.textAlign    = 'left';
           ctx.textBaseline = 'alphabetic';
         }
+
+        ctx.restore();
+
+        // Kill particles (drawn after restore so they're not shaken)
+        for (const p of particles) {
+          const alpha = p.life / p.maxLife;
+          ctx.globalAlpha = alpha;
+          ctx.strokeStyle = p.col;
+          ctx.lineWidth   = 2;
+          ctx.shadowBlur  = 6;
+          ctx.shadowColor = p.col;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x - p.vx * 0.04, p.y - p.vy * 0.04);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur  = 0;
+
+        // Score popups
+        ctx.font      = '9px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+        for (const popup of popups) {
+          const alpha = popup.life / 0.7;
+          ctx.globalAlpha  = alpha;
+          ctx.fillStyle    = '#ffcc44';
+          ctx.shadowBlur   = 8;
+          ctx.shadowColor  = '#ffcc44';
+          ctx.fillText(`+${popup.val}`, popup.x, popup.y);
+        }
+        ctx.globalAlpha  = 1;
+        ctx.shadowBlur   = 0;
+        ctx.textAlign    = 'left';
       },
     });
 
