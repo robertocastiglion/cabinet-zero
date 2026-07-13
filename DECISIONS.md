@@ -24,3 +24,8 @@
 | chrome-rush | Game over: 3 HP, contatto fisico con nemici | Proiettili nemici | Rimuove gestione proiettili nemici → rendering + sim più semplici, feel più diretto |
 | chrome-rush | Escalation: runner da wave 2, velocità +10/+13 px/s per wave | Solo walker | Varietà visiva e tattica senza aggiungere un terzo tipo di entity |
 | chrome-rush | Design originale: genere run-and-gun, ambientazione cyber | — | Zero assets derivati; meccanica facing-to-shoot è originale; nessun clone |
+| gravity-well | Meccanica: flip gravità istantaneo snap | Fisica morbida con parabola | Snappy feel, decisioni immediate senza calcolo traiettoria |
+| gravity-well | Droni bounce ai bordi | Spawn/despawn | Sempre presenti → tensione costante |
+| gravity-well | Cristalli su entrambe le superfici | Solo piano | Forza l'uso del flip per raccogliere punti |
+| gravity-well | Wave: +1 drone +8% speed ogni 8 cristalli | Wave a tempo | Giocatore controlla ritmo avanzamento |
+| gravity-well | Design originale: genere gravity-flip arcade | — | Zero assets derivati, meccanica originale |

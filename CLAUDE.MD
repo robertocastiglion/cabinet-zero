@@ -277,6 +277,19 @@ node scripts/legal-lint.mjs
 
 ---
 
+**Data:** 2026-07-13 · **Esecutore:** Claude Sonnet 4.6 (loop agentico — IMP-1/2/3/4)
+
+| Step | File | Risultato |
+|------|------|-----------|
+| CI fix | package.json, pnpm-lock.yaml, rm pnpm-workspace.yaml, rm pnpm.yaml | ✅ onlyBuiltDependencies in package.json["pnpm"] |
+| IMP-3 vector-duel | src/games/vector-duel/index.ts | ✅ starfield, ship trail, rock glow, explosion particles |
+| IMP-2 chrome-rush | src/games/chrome-rush/index.ts | ✅ screen shake, kill particles, score popups |
+| IMP-1 gravity-well | src/games/gravity-well/sim.ts, sim.test.ts, index.ts, index.test.ts, catalog.ts, DECISIONS.md, ASSETS.md | ✅ 9/9 test, 1.87 kB gzip |
+
+**Tests:** 50/50 passing (13 file) · **Build:** gravity-well 1.87 kB · chrome-rush 3.09 kB · vector-duel 3.03 kB (tutti < 30 kB ✅)
+
+---
+
 ## [REPORT VERIFICA]
 
 <!-- Compilato dal Verificatore. PASS / FAIL + causa precisa + file:riga.

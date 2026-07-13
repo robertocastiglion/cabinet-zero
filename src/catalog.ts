@@ -34,4 +34,12 @@ export const CATALOG: GameEntry[] = [
     accent: '#00e676',
     load: () => import('./games/chrome-rush/index').then((m) => m.default),
   },
+  {
+    slug: 'gravity-well',
+    title: 'GRAVITY WELL',
+    tagline: 'Inverti. Raccogli. Sopravvivi.',
+    year: '2025',
+    accent: '#ffcc44',
+    load: () => import('./games/gravity-well/index').then((m) => m.default),
+  },
 ];
