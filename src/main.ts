@@ -1,6 +1,100 @@
 import { CATALOG } from './catalog';
 import type { GameHandle } from './engine/types';
 
+// ── Web Audio (generative — zero external files) ──────────────────────────────
+let audioCtx: AudioContext | null = null;
+let menuGain: GainNode | null = null;
+
+function initAudio(): AudioContext {
+  if (audioCtx) return audioCtx;
+  audioCtx = new AudioContext();
+
+  menuGain = audioCtx.createGain();
+  menuGain.gain.value = 0;
+  menuGain.connect(audioCtx.destination);
+
+  // LFO — slow volume swell
+  const lfo = audioCtx.createOscillator();
+  lfo.frequency.value = 0.18;
+  const lfoG = audioCtx.createGain();
+  lfoG.gain.value = 0.004;
+  lfo.connect(lfoG);
+  lfoG.connect(menuGain.gain);
+  lfo.start();
+
+  // three drone oscillators
+  const defs: Array<[number, OscillatorType, number]> = [
+    [55,  'triangle', 0.015],
+    [110, 'sine',     0.008],
+    [165, 'triangle', 0.005],
+  ];
+  for (const [freq, type, gain] of defs) {
+    const osc = audioCtx.createOscillator();
+    const g   = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    g.gain.value = gain;
+    osc.connect(g);
+    g.connect(menuGain);
+    osc.start();
+  }
+
+  menuGain.gain.setTargetAtTime(1, audioCtx.currentTime, 1.5);
+  return audioCtx;
+}
+
+function startMenuAudio(): void {
+  if (!audioCtx || !menuGain) return;
+  if (audioCtx.state === 'suspended') void audioCtx.resume();
+  menuGain.gain.cancelScheduledValues(audioCtx.currentTime);
+  menuGain.gain.setTargetAtTime(1, audioCtx.currentTime, 0.8);
+}
+
+function stopMenuAudio(): void {
+  if (!audioCtx || !menuGain) return;
+  menuGain.gain.cancelScheduledValues(audioCtx.currentTime);
+  menuGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.3);
+}
+
+function playClickSound(): void {
+  const ctx = initAudio();
+  const buf  = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.06), ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.015));
+  }
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 880;
+  filter.Q.value = 6;
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const g = ctx.createGain();
+  g.gain.value = 0.18;
+  src.connect(filter);
+  filter.connect(g);
+  g.connect(ctx.destination);
+  src.start();
+}
+
+function playLaunchSound(): void {
+  const ctx = initAudio();
+  const freqs = [261, 330, 392, 523];
+  freqs.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = freq;
+    const t = ctx.currentTime + i * 0.04;
+    g.gain.setValueAtTime(0.06, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    osc.connect(g);
+    g.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.2);
+  });
+}
+
 // ── localStorage high score ───────────────────────────────────────────────────
 const HS_KEY = 'cabinet-zero-hs';
 function loadScores(): Record<string, number> {
@@ -350,7 +444,7 @@ for (const entry of CATALOG) {
     </div>
   `;
 
-  card.addEventListener('click', () => launchGame(entry.slug));
+  card.addEventListener('click', () => { playClickSound(); launchGame(entry.slug); });
   gamesGrid.appendChild(card);
 }
 
@@ -391,6 +485,8 @@ async function launchGame(slug: string) {
   if (!entry) return;
   activeSlug = slug;
   currentScore = 0;
+  playLaunchSound();
+  stopMenuAudio();
 
   titleHud.textContent = 'CARICAMENTO…';
   waveDsp.textContent = '';
@@ -457,6 +553,7 @@ function exitGame() {
   gameView.classList.add('hidden');
   gridView.classList.remove('hidden');
   activeSlug = '';
+  startMenuAudio();
 }
 
 btnBack.addEventListener('click', exitGame);
